@@ -1,0 +1,54 @@
+<nav class="navbar navbar-expand-lg navbar-dark  bg-dark">
+  <div class="container">
+    <a class="navbar-brand" routerLink='/'>Dating App</a>
+
+      <ul class="navbar-nav me-auto mb-2 mb-md-0">
+        <ng-container *ngIf="accountService.currentUser$ | async">
+          <li class="nav-item">
+            <a class="nav-link"  routerLink='/members' routerLinkActive='active'>Matches</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" routerLink='/lists' routerLinkActive='active'>Lists</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link " routerLink='/messages' routerLinkActive='active' >Messages</a>
+          </li>
+        </ng-container>
+        <li class="nav-item">
+          <a class="nav-link " routerLink='/errors' routerLinkActive='active' >TestErrors</a>
+        </li>
+        
+
+      </ul>
+
+      
+      <div class="dropdown" *ngIf="accountService.currentUser$ | async as user" dropdown>
+        <a class = "dropdown-toggle text-light" dropdownToggle>Welcome {{user.username | titlecase}} </a>
+        <div class="dropdown-menu mt-3" *dropdownMenu>
+          <a routerLink='/member/edit' class="dropdown-item">Edit Profile</a>
+          <div class="dropdown-divider"></div>
+          <a href="#" class="dropdown-item" (click)="logout()">Logout</a>
+        </div>
+      </div>
+      <form class="d-flex form-inline mt-2 nt-d-0" *ngIf="(accountService.currentUser$ | async)===null" #loginForm="ngForm"  (ngSubmit)="login()" autocomplete="off">
+        <input
+        name="username"
+        [(ngModel)]="model.username"
+        class="form-control me-2" 
+        type="text" 
+        placeholder="Username" >
+        <input 
+        class="form-control me-2" 
+        name = "password"
+        [(ngModel)]="model.password"
+        type="password" 
+        placeholder="Password" >
+        <button class="btn btn-success" type="submit">Login</button>
+        <button  (click)="initiateRecording()" class="btn btn-outline-info" *ngIf="!recording" style="cursor: pointer;background-color: green;color: white;"> start recording </button>
+        <button (click)="stopRecording()" class="btn btn-outline-info" *ngIf="recording" style="cursor: pointer;background-color: red;color: white;"> Stop Recording </button>
+        <audio controls="" *ngIf="url" >
+          <source [src]="sanitize(url)" type="audio/wav">
+        </audio>
+      </form>
+    </div>
+</nav>

@@ -40,6 +40,7 @@ namespace API
             services.AddApplicationServices(_config);
             services.AddIdentityServices(_config);   
             
+            
             services.AddCors();
             // services.AddSwaggerGen(c =>
             // {
