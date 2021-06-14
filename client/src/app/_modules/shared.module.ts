@@ -7,6 +7,7 @@ import{TabsModule} from 'ngx-bootstrap/tabs';
 import{NgxGalleryModule} from '@kolkov/ngx-gallery';
 import "@angular/compiler";
 import { FileUploadModule } from 'ng2-file-upload';
+import {BsDatepickerModule} from 'ngx-bootstrap/datepicker';
 @NgModule({
   declarations: [],
   imports: [
@@ -16,6 +17,7 @@ import { FileUploadModule } from 'ng2-file-upload';
     TabsModule.forRoot(),
     NgxGalleryModule,
     FileUploadModule,
+    BsDatepickerModule.forRoot(),
     ToastrModule.forRoot({
       positionClass:'toast-bottom-right'
     })
@@ -26,7 +28,8 @@ import { FileUploadModule } from 'ng2-file-upload';
     ToastrModule,
     TabsModule,
     NgxGalleryModule,
-    FileUploadModule
+    FileUploadModule,
+    BsDatepickerModule
 
   ]
 })
