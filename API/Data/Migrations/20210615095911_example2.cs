@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace API.Data.Migrations
+namespace API.Migrations
 {
-    public partial class edited_photo_table : Migration
+    public partial class example2 : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {

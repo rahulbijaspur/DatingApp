@@ -18,7 +18,6 @@ export class NavComponent implements OnInit {
     "password":""
   }
 
-  
   constructor(public accountService :AccountService,private router :Router,private toastr:ToastrService,
     private domSanitizer: DomSanitizer) { }
  

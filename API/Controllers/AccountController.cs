@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -13,7 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+
 
 namespace API.Controllers
 {
@@ -46,7 +47,7 @@ namespace API.Controllers
             IFormFile file = form.Files[0];/* getting the blob file out of form*/
             string voiceprint = await _apiservices.Get_voice_template(file);
 
-            
+
             RegisterDto registerDto = JsonConvert.DeserializeObject<RegisterDto>(data);
             if (await UserExists(registerDto.Username)) return BadRequest("Username is taken");
 
@@ -64,7 +65,9 @@ namespace API.Controllers
             return new UserDto
             {
                 Username = user.UserName,
-                Token = _tokenService.CreateToken(user)
+                Token = _tokenService.CreateToken(user),
+                KnownAs = user.KnownAs,
+                Gender = user.Gender
 
             };
         }
@@ -82,27 +85,52 @@ namespace API.Controllers
 
                 IFormFile file = form.Files[0];
                 string voiceprint_login = await _apiservices.Get_voice_template(file);
-                foreach (AppUser item in await _context.Users.ToListAsync())
+                _apiservices.createIdentificationList();
+
+                string idenficationList = _apiservices.Get_identification_list();
+
+                string resultArr = await _apiservices.Get_identification_result_array(idenficationList, voiceprint_login);
+                scores_thres_arr json = JsonConvert.DeserializeObject<scores_thres_arr>(resultArr);
+
+                float m = json.scores.Max();
+                int indx = Array.IndexOf(json.scores, m);
+
+                var user1 = await _context.Users
+                .Include(p => p.Photos)
+                .SingleOrDefaultAsync(x => x.Id == indx + 1);
+
+
+                return new UserDto
                 {
-                    if (item.Voiceprint != null)
-                    {
-                        dynamic result = JsonConvert.DeserializeObject(await _apiservices.Get_match(item.Voiceprint, voiceprint_login));
-                        if (result.probability > 0.75)
-                        {
-                            var user1 = await _context.Users
-                                    .Include(p => p.Photos)
-                                       .SingleOrDefaultAsync(x => x.UserName == item.UserName);
+                    Username = user1.UserName,
+                    Token = _tokenService.CreateToken(user1),
+                    PhotoUrl = user1.Photos.FirstOrDefault(x => x.IsMain)?.Url,
+                    KnownAs = user1.KnownAs,
+                    Gender = user1.Gender
+                };
 
-                            return new UserDto
-                            {
-                                Username = item.UserName,
-                                Token = _tokenService.CreateToken(item),
-                                PhotoUrl = item.Photos.FirstOrDefault(x => x.IsMain)?.Url
-                            };
-                        }
 
-                    }
-                }
+                // foreach (AppUser item in await _context.Users.ToListAsync())
+                // {
+                //     if (item.Voiceprint != null)
+                //     {
+                //         dynamic result = JsonConvert.DeserializeObject(await _apiservices.Get_match(item.Voiceprint, voiceprint_login));
+                //         if (result.probability > 0.75)
+                //         {
+                //             var user1 = await _context.Users
+                //                     .Include(p => p.Photos)
+                //                        .SingleOrDefaultAsync(x => x.UserName == item.UserName);
+
+                //             return new UserDto
+                //             {
+                //                 Username = item.UserName,
+                //                 Token = _tokenService.CreateToken(item),
+                //                 PhotoUrl = item.Photos.FirstOrDefault(x => x.IsMain)?.Url
+                //             };
+                //         }
+
+                //     }
+                // }
 
 
             }
@@ -121,13 +149,15 @@ namespace API.Controllers
                 {
                     Username = user.UserName,
                     Token = _tokenService.CreateToken(user),
-                    PhotoUrl = user.Photos.FirstOrDefault(x => x.IsMain)?.Url
+                    PhotoUrl = user.Photos.FirstOrDefault(x => x.IsMain)?.Url,
+                    KnownAs = user.KnownAs,
+                    Gender = user.Gender
                 };
 
             }
             else
             {
-                
+
                 IFormFile file = form.Files[0];
                 string voiceprint_login = await _apiservices.Get_voice_template(file);
                 string voice_user = user.Voiceprint;
@@ -138,11 +168,14 @@ namespace API.Controllers
                     {
                         Username = user.UserName,
                         Token = _tokenService.CreateToken(user),
-                        PhotoUrl = user.Photos.FirstOrDefault(x => x.IsMain)?.Url
+                        PhotoUrl = user.Photos.FirstOrDefault(x => x.IsMain)?.Url,
+                        KnownAs = user.KnownAs,
+                        Gender = user.Gender
                     };
                 }
                 return BadRequest("please enter passoword correctly or check with voice login");
             }
+
         }
 
 

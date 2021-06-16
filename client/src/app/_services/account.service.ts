@@ -8,29 +8,6 @@ import { environment } from 'src/environments/environment';
 import { User } from '../_models/User';
 
 
-class registerdto{
-  
-
-
-private _user : User;
-public get user() : User {
-  return this._user;
-}
-public set user(v : User) {
-  this._user = v;
-}
-
-
-private _blob : object;
-public get blob() : object {
-  return this._blob;
-}
-public set blob(v : object) {
-  this._blob = v;
-}
-
-
-}
 @Injectable({
   providedIn: 'root'
 })
