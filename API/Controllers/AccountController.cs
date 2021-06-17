@@ -93,6 +93,7 @@ namespace API.Controllers
                 scores_thres_arr json = JsonConvert.DeserializeObject<scores_thres_arr>(resultArr);
 
                 float m = json.scores.Max();
+                
                 int indx = Array.IndexOf(json.scores, m);
 
                 var user1 = await _context.Users
