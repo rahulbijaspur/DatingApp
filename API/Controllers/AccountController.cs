@@ -24,6 +24,7 @@ namespace API.Controllers
         private readonly ITokenService _tokenService;
         private readonly apiservices _apiservices;
         private readonly IMapper _mapper;
+        private string path;
 
         public AccountController(DataContext context, ITokenService tokenService, apiservices apiservices, IMapper mapper)
         {
@@ -45,20 +46,35 @@ namespace API.Controllers
 
             // getting the voiceprint from voice 
             IFormFile file = form.Files[0];/* getting the blob file out of form*/
-            string voiceprint = await _apiservices.Get_voice_template(file);
+            this.path =_apiservices.wavfileCreate(file);
+            string voiceprint = await _apiservices.Get_voice_template(path);
+            checkQuality quality=_apiservices.getcheck_quality_from_file(path);
 
+            if (!quality.quality_short_description.Equals("OK")){
+                return BadRequest(quality.quality_short_description);
+            }
+
+            if (quality.obtained_values.SNR>quality.threshold_values.SNR+6){
+                return BadRequest("your noise to voice ratio is high");
+            }
+            string[] arr = new string[1];
+            arr[0] = voiceprint;
+            string str=_apiservices.Get_identification_list();
+            if (str==""){
+                _apiservices.createIdentificationList();
+
+            }
+            _apiservices.enrichIdentificationList(arr);
 
             RegisterDto registerDto = JsonConvert.DeserializeObject<RegisterDto>(data);
             if (await UserExists(registerDto.Username)) return BadRequest("Username is taken");
 
             var user = _mapper.Map<AppUser>(registerDto);
 
-            using var hamc = new HMACSHA512();
+            
             user.UserName = registerDto.Username.ToLower();
-            user.PasswordHash = hamc.ComputeHash(Encoding.UTF8.GetBytes(registerDto.password));
-            user.PasswordSalt = hamc.Key;
-            user.Voiceprint = voiceprint;
 
+            user.Voiceprint = voiceprint;
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
@@ -68,7 +84,6 @@ namespace API.Controllers
                 Token = _tokenService.CreateToken(user),
                 KnownAs = user.KnownAs,
                 Gender = user.Gender
-
             };
         }
 
@@ -79,28 +94,25 @@ namespace API.Controllers
 
             var data = form["details"];
             LoginDto logindto = JsonConvert.DeserializeObject<LoginDto>(data);
+            if (form.Files.Count==0 && logindto.Username=="" && logindto.password=="" ){
+                return BadRequest("Nothing entered");
+            }
             if (logindto.Username == "" && logindto.password == "")
             {
-                // return Unauthorized("Invalid Username");
-
                 IFormFile file = form.Files[0];
-                string voiceprint_login = await _apiservices.Get_voice_template(file);
-                _apiservices.createIdentificationList();
-
+                
+                this.path =_apiservices.wavfileCreate(file);
+                string voiceprint_login = await _apiservices.Get_voice_template(this.path);
                 string idenficationList = _apiservices.Get_identification_list();
 
-                string resultArr = await _apiservices.Get_identification_result_array(idenficationList, voiceprint_login);
-                scores_thres_arr json = JsonConvert.DeserializeObject<scores_thres_arr>(resultArr);
-
-                float m = json.scores.Max();
-                
-                int indx = Array.IndexOf(json.scores, m);
-
+                iden_voice_temp scoreArr =new iden_voice_temp();
+                scoreArr.identification_list=idenficationList;
+                scoreArr.voice_template=voiceprint_login;
+                scores_thres_arr resultArr =  _apiservices.Get_identification_result_array(scoreArr);
+                int[] indxs =_apiservices.Get_indexes_of_matched_result(resultArr);
                 var user1 = await _context.Users
                 .Include(p => p.Photos)
-                .SingleOrDefaultAsync(x => x.Id == indx + 1);
-
-
+                .SingleOrDefaultAsync(x => x.Id == indxs[0]+1);
                 return new UserDto
                 {
                     Username = user1.UserName,
@@ -111,41 +123,18 @@ namespace API.Controllers
                 };
 
 
-                // foreach (AppUser item in await _context.Users.ToListAsync())
-                // {
-                //     if (item.Voiceprint != null)
-                //     {
-                //         dynamic result = JsonConvert.DeserializeObject(await _apiservices.Get_match(item.Voiceprint, voiceprint_login));
-                //         if (result.probability > 0.75)
-                //         {
-                //             var user1 = await _context.Users
-                //                     .Include(p => p.Photos)
-                //                        .SingleOrDefaultAsync(x => x.UserName == item.UserName);
-
-                //             return new UserDto
-                //             {
-                //                 Username = item.UserName,
-                //                 Token = _tokenService.CreateToken(item),
-                //                 PhotoUrl = item.Photos.FirstOrDefault(x => x.IsMain)?.Url
-                //             };
-                //         }
-
-                //     }
-                // }
-
-
             }
-            var user = await _context.Users
+             var user = await _context.Users
             .Include(p => p.Photos)
             .SingleOrDefaultAsync(x => x.UserName == logindto.Username);
+
+            if (user==null){
+                return Unauthorized("invalid credentials");
+            }
+
             if (logindto.password.Length > 0)
             {
-                using var hmac = new HMACSHA512(user.PasswordSalt);
-                var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(logindto.password));
-                for (int i = 0; i < computedHash.Length; i++)
-                {
-                    if (computedHash[i] != user.PasswordHash[i]) return Unauthorized("Invalid password");
-                }
+
                 return new UserDto
                 {
                     Username = user.UserName,
@@ -159,8 +148,8 @@ namespace API.Controllers
             else
             {
 
-                IFormFile file = form.Files[0];
-                string voiceprint_login = await _apiservices.Get_voice_template(file);
+                
+                string voiceprint_login = await _apiservices.Get_voice_template(this.path);
                 string voice_user = user.Voiceprint;
                 dynamic result = JsonConvert.DeserializeObject(await _apiservices.Get_match(voice_user, voiceprint_login));
                 if (result.probability > 0.75)

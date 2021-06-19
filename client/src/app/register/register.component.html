@@ -34,8 +34,23 @@
 
   <div class="form-group text-center">
     <div class="container">
-      <h5>register your voice here</h5>
-      <h6>record you voice and click on register</h6>
+      <h5>Voice Registration</h5>
+      <div class="w3-card-4">
+
+        <header class="w3-container w3-blue">
+          <h5>Record your voice here !! read out loud and clear the text</h5>
+        </header>
+        
+        <div class="w3-container">
+          <p>Sunset is the time of day when our sky meets the outer space solar winds. There are blue, pink, and purple swirls, spinning and twisting, like clouds of balloons caught in a whirlwind. The sun moves slowly to hide behind the line of horizon, while the moon races to take its place in prominence atop the night sky. People slow to a crawl, entranced, fully forgetting the deeds that must still be done. There is a coolness, a calmness, when the sun does set.</p>
+        </div>
+        
+        <footer class="w3-container w3-blue">
+          <h5 class="text-danger">after recording click on register</h5>
+        </footer>
+        
+        </div>
+
       <button  (click)="initiateRecording()" class="btn btn-outline-info" *ngIf="!recording" style="cursor: pointer;background-color: green;color: white;"> start recording </button>
       <button (click)="stopRecording()" class="btn btn-outline-info" *ngIf="recording" style="cursor: pointer;background-color: red;color: white;"> Stop Recording </button>
       <audio controls="" *ngIf="url" >
