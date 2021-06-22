@@ -41,6 +41,22 @@ namespace API.Controllers
 
 
         }
+
+        [HttpGet("getsome")]
+        public AppUser Getsome()
+        {
+            try
+            {
+                return _userManager.Users.FirstOrDefault(x => x.UserName == "lisa");
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogInformation(ex.Message);
+                throw ex;
+            }
+            
+        }
+
         [HttpPost("register")]
         public async Task<ActionResult<UserDto>> Register([FromForm] IFormCollection form)
         {
@@ -103,7 +119,7 @@ namespace API.Controllers
             _logger.LogInformation("login api called");
 
             var data = form["details"];
-            IFormFile file = form.Files[0];
+            
             LoginDto logindto = JsonConvert.DeserializeObject<LoginDto>(data);
             if (form.Files.Count == 0 && logindto.Username == "" && logindto.password == "")
             {
@@ -111,6 +127,8 @@ namespace API.Controllers
             }
             if (logindto.Username == "" && logindto.password == "")
             {
+
+                IFormFile file = form.Files[0];
 
 
                 _apiservices.wavfileCreate(file);
@@ -165,6 +183,7 @@ namespace API.Controllers
             }
             else
             {
+                IFormFile file = form.Files[0];
 
                 string voiceprint_login = await _apiservices.Get_voice_template(file);
                 string voice_user = user.Voiceprint;
