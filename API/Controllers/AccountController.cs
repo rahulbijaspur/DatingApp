@@ -25,7 +25,6 @@ namespace API.Controllers
         private readonly ITokenService _tokenService;
         private readonly apiservices _apiservices;
         private readonly IMapper _mapper;
-        private string path;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly UserManager<AppUser> _userManager;
 
@@ -49,16 +48,16 @@ namespace API.Controllers
             {
                 // getting the voiceprint from voice 
                 IFormFile file = form.Files[0];/* getting the blob file out of form*/
-                this.path = _apiservices.wavfileCreate(file);
-                voiceprint = await _apiservices.Get_voice_template(path);
-                checkQuality quality = _apiservices.getcheck_quality_from_file(path);
+                _apiservices.wavfileCreate(file);
+                voiceprint = await _apiservices.Get_voice_template(file);
+                checkQuality quality = _apiservices.getcheck_quality_from_file();
 
                 if (!quality.quality_short_description.Equals("OK"))
                 {
                     return BadRequest(quality.quality_short_description);
                 }
 
-                if (quality.obtained_values.SNR > quality.threshold_values.SNR + 6)
+                if (quality.obtained_values.SNR > quality.threshold_values.SNR )
                 {
                     return BadRequest("your noise to voice ratio is high");
                 }
@@ -100,6 +99,7 @@ namespace API.Controllers
         {
 
             var data = form["details"];
+            IFormFile file = form.Files[0];
             LoginDto logindto = JsonConvert.DeserializeObject<LoginDto>(data);
             if (form.Files.Count == 0 && logindto.Username == "" && logindto.password == "")
             {
@@ -107,10 +107,10 @@ namespace API.Controllers
             }
             if (logindto.Username == "" && logindto.password == "")
             {
-                IFormFile file = form.Files[0];
+                
 
-                this.path = _apiservices.wavfileCreate(file);
-                string voiceprint_login = await _apiservices.Get_voice_template(this.path);
+                _apiservices.wavfileCreate(file);
+                string voiceprint_login = await _apiservices.Get_voice_template(file);
                 string idenficationList = _apiservices.Get_identification_list();
 
                 iden_voice_temp scoreArr = new iden_voice_temp();
@@ -162,7 +162,7 @@ namespace API.Controllers
             else
             {
 
-                string voiceprint_login = await _apiservices.Get_voice_template(this.path);
+                string voiceprint_login = await _apiservices.Get_voice_template(file);
                 string voice_user = user.Voiceprint;
                 dynamic result = JsonConvert.DeserializeObject(await _apiservices.Get_match(voice_user, voiceprint_login));
                 if (result.probability > 0.75)

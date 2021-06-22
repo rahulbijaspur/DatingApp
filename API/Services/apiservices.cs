@@ -13,7 +13,7 @@ using RestSharp;
 namespace API.Services
 {
 
-        public class ThresholdValues
+    public class ThresholdValues
     {
         public double SNR { get; set; }
         public double SpeechLength { get; set; }
@@ -69,17 +69,17 @@ namespace API.Services
             _context = context;
         }
 
-        public string wavfileCreate(IFormFile file){
+        public void wavfileCreate(IFormFile file)
+        {
             MemoryStream stream = new MemoryStream();
             file.CopyTo(stream);
             byte[] arr = stream.ToArray();
-            System.IO.File.WriteAllBytes(@"E:\register.wav", arr);
-            string path ="E:\register.wav";
-            return Path.GetFullPath(path);
+            System.IO.File.WriteAllBytes(@"..\api\wavfile\register.wav", arr);
+            
 
         }
 
-        public async Task<string> Get_voice_template(string path)
+        public async Task<string> Get_voice_template(IFormFile file)
         {
 
             var client = new RestClient("https://voice-rest-api.idrnd.net/voice_template_factory/create_voice_template_from_file?channel_type=TEL");
@@ -87,7 +87,7 @@ namespace API.Services
             var request = new RestRequest(Method.POST);
             request.AddHeader("x-api-key", "hkXVNav9gG67bETYEa3TS8imx12ljSYUqMEsWaEg");
             request.AddHeader("Content-Type", "multipart/form-data");
-            request.AddFile("wav_file", @"E:\register.wav");
+            request.AddFile("wav_file",@"..\api\wavfile\register.wav");
             IRestResponse response = client.Execute(request);
             return await Task.FromResult(response.Content.ToString());
         }
@@ -136,34 +136,11 @@ namespace API.Services
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
                 string res = await Task.FromResult(response.Content.ToString());
-                System.IO.File.WriteAllText(@"E:\voice sample collection\identificationList.txt", res);
+                System.IO.File.WriteAllText(@"..\API\wavfile\identificationList.txt", res);
             }
 
 
         }
-
-        // public async Task<bool> ifUseralreadyExists(string path)
-        // {
-        //     string voiceprint_login = await Get_voice_template(path);
-
-        //     iden_voice_temp some = new iden_voice_temp();
-        //     some.identification_list= Get_identification_list();
-        //     some.voice_template=Get_voice_template(path);
-        //     string resultArr = await Get_identification_result_array();
-        //     scores_thres_arr json = JsonConvert.DeserializeObject<scores_thres_arr>(resultArr);
-        //     float m = json.scores.Max();
-        //     threshold = json.threshold;
-        //     if (m > 1 && json.threshold > 0)
-        //     {
-        //         return true;
-
-        //     }
-
-
-        //     return false;
-        // }
-
-
 
         public async void enrichIdentificationList(string[] voicetemplatelist)
         {
@@ -190,7 +167,7 @@ namespace API.Services
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
                 string res = await Task.FromResult(response.Content.ToString());
-                System.IO.File.WriteAllText(@"E:\voice sample collection\identificationList.txt", res);
+                System.IO.File.WriteAllText(@"..\API\wavfile\identificationList.txt", res);
             }
 
         }
@@ -213,19 +190,20 @@ namespace API.Services
 
             request.AddParameter("application/json", jsonString, ParameterType.RequestBody);
             IRestResponse response = client.Execute(request);
-            return JsonConvert.DeserializeObject<scores_thres_arr>(response.Content); 
+            return JsonConvert.DeserializeObject<scores_thres_arr>(response.Content);
 
         }
 
 
-        public checkQuality getcheck_quality_from_file(string path)
+        public checkQuality getcheck_quality_from_file()
         {
+
             var client = new RestClient("https://voice-rest-api.idrnd.net/voice_template_factory/check_quality_from_file");
             client.Timeout = -1;
             var request = new RestRequest(Method.POST);
             request.AddHeader("x-api-key", "hkXVNav9gG67bETYEa3TS8imx12ljSYUqMEsWaEg");
             request.AddHeader("Content-Type", "multipart/form-data");
-            request.AddFile("wav_file", @"E:\register.wav");
+            request.AddFile("wav_file", @"..\api\wavfile\register.wav");
             IRestResponse response = client.Execute(request);
             checkQuality myDeserializedClass = JsonConvert.DeserializeObject<checkQuality>(response.Content);
             return myDeserializedClass;
@@ -241,7 +219,7 @@ namespace API.Services
             request.AddHeader("Content-Type", "application/json");
             request.AddParameter("application/json", x, ParameterType.RequestBody);
             IRestResponse response = client.Execute(request);
-            
+
             int[] Aint = Array.ConvertAll(response.Content.ToCharArray(), c => (int)Char.GetNumericValue(c));
             return Aint;
 
