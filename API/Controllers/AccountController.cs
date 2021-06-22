@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 
@@ -27,9 +28,11 @@ namespace API.Controllers
         private readonly IMapper _mapper;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly UserManager<AppUser> _userManager;
+        private readonly ILogger<AccountController> _logger;
 
-        public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, ITokenService tokenService, apiservices apiservices, IMapper mapper)
+        public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, ITokenService tokenService, apiservices apiservices, IMapper mapper, ILogger<AccountController> logger)
         {
+            _logger = logger;
             _userManager = userManager;
             _signInManager = signInManager;
             _mapper = mapper;
@@ -43,7 +46,7 @@ namespace API.Controllers
         {
             // if (registerDto.Username.Length<=0)
             //     return BadRequest("request not properly sent ,refresh the page and try");
-            string voiceprint=null;
+            string voiceprint = null;
             if (form.Files.Count != 0)
             {
                 // getting the voiceprint from voice 
@@ -57,7 +60,7 @@ namespace API.Controllers
                     return BadRequest(quality.quality_short_description);
                 }
 
-                if (quality.obtained_values.SNR > quality.threshold_values.SNR )
+                if (quality.obtained_values.SNR > quality.threshold_values.SNR)
                 {
                     return BadRequest("your noise to voice ratio is high");
                 }
@@ -70,7 +73,7 @@ namespace API.Controllers
 
                 }
                 _apiservices.enrichIdentificationList(arr);
-                
+
             }
 
             var data = form["details"];
@@ -97,6 +100,7 @@ namespace API.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<UserDto>> Login([FromForm] IFormCollection form)
         {
+            _logger.LogInformation("login api called");
 
             var data = form["details"];
             IFormFile file = form.Files[0];
@@ -107,7 +111,7 @@ namespace API.Controllers
             }
             if (logindto.Username == "" && logindto.password == "")
             {
-                
+
 
                 _apiservices.wavfileCreate(file);
                 string voiceprint_login = await _apiservices.Get_voice_template(file);
