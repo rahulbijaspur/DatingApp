@@ -13,6 +13,10 @@
      class="invalid-feedback"> 
      {{label}} must be at least {{ngControl.control.errors.minlength['requiredLength']}}
     </div>
+    <div *ngIf="ngControl.control.errors?.pattern"
+    class="invalid-feedback"> 
+    {{label}} must be at least {{ngControl.control.errors.minlength['requiredLength']}}
+   </div>
 
     <div *ngIf="ngControl.control.errors?.maxlength"
     class="invalid-feedback"> 

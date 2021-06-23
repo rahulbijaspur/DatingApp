@@ -4,7 +4,7 @@ import { AccountService } from '../_services/account.service';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import * as RecordRTC from 'recordrtc';
-import { AbstractControl, FormBuilder, FormControl, FormGroup, ValidatorFn, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormControl, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 @Component({
   selector: 'app-register',
   templateUrl: './register.component.html',
@@ -16,6 +16,10 @@ export class RegisterComponent implements OnInit {
   registerForm :FormGroup;
   maxDate:Date;
   validationErrors: string[]=[];
+  ALPHA_NUMERIC_REGEX = /^[a-zA-Z0-9_]*$/;
+  ALPHA_NUMERIC_VALIDATION_ERROR = { alphaNumericError: 'only alpha numeric values are allowed' }
+  
+  
 
   constructor(private domSanitizer: DomSanitizer,
      public router :Router,
@@ -29,15 +33,16 @@ export class RegisterComponent implements OnInit {
     this.maxDate.setFullYear(this.maxDate.getFullYear()-18);
 
   }
+  
   initializeForm(){
     this.registerForm = this.fb.group({
       gender:['male'],
       username :['',Validators.required],
       knownAs :['',Validators.required],
       dateOfBirth :['',Validators.required],
-      city:['',Validators.required],
-      country :['',Validators.required],
-      password:['',[Validators.required,Validators.minLength(4),Validators.maxLength(8)]],
+      city:['Unknown'],
+      country :['Unknown'],
+      password:['',[Validators.required,Validators.minLength(6),Validators.maxLength(12)]],
       confirmPassword:['',[Validators.required,this.matchValues("password")]]
     })
     this.registerForm.controls.password.valueChanges.subscribe(()=>{
@@ -45,18 +50,24 @@ export class RegisterComponent implements OnInit {
     })
   }
 
+
   matchValues(matchTo:string):ValidatorFn{
     return (control:AbstractControl)=>{
       return control?.value===control?.parent?.controls[matchTo].value?null:{isMatching:true} 
     }
   }
+  alphaNumericValidator(control: FormControl): ValidationErrors | null {
+    return this.ALPHA_NUMERIC_REGEX.test(control.value) ? null : this.ALPHA_NUMERIC_VALIDATION_ERROR;
+}
+
 
   register(){
     // console.log(this.registerForm.value);
     this.accountService.register(this.blob,this.registerForm.value).subscribe(response=>{
       this.router.navigateByUrl('/members');
     },error=>{
-      this.validationErrors =error;
+      this.toastr.show(error[0].description);
+      console.log(error);
     })
   }
   cancel(){

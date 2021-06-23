@@ -26,7 +26,7 @@
   <div class="row" *ngIf="validationErrors.length>0">
     <ul class= "text-danger">
       <li *ngFor="let error of validationErrors">
-        {{error}}
+        {{error.description}}
       </li>
     </ul>
   </div>

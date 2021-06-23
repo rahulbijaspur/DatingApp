@@ -42,26 +42,13 @@ namespace API.Controllers
 
         }
 
-        [HttpGet("getsome")]
-        public AppUser Getsome()
-        {
-            try
-            {
-                return _userManager.Users.FirstOrDefault(x => x.UserName == "lisa");
-            }
-            catch (System.Exception ex)
-            {
-                _logger.LogInformation(ex.Message);
-                throw ex;
-            }
-            
-        }
 
         [HttpPost("register")]
         public async Task<ActionResult<UserDto>> Register([FromForm] IFormCollection form)
         {
             // if (registerDto.Username.Length<=0)
             //     return BadRequest("request not properly sent ,refresh the page and try");
+
             string voiceprint = null;
             if (form.Files.Count != 0)
             {
@@ -76,19 +63,13 @@ namespace API.Controllers
                     return BadRequest(quality.quality_short_description);
                 }
 
-                if (quality.obtained_values.SNR > quality.threshold_values.SNR)
+                if (quality.obtained_values.SNR < quality.threshold_values.SNR)
                 {
                     return BadRequest("your noise to voice ratio is high");
                 }
                 string[] arr = new string[1];
                 arr[0] = voiceprint;
-                string str = _apiservices.Get_identification_list();
-                if (str == "")
-                {
-                    _apiservices.createIdentificationList();
-
-                }
-                _apiservices.enrichIdentificationList(arr);
+                await _apiservices.enrichIdentificationList(arr);
 
             }
 
@@ -118,8 +99,9 @@ namespace API.Controllers
         {
             _logger.LogInformation("login api called");
 
+
             var data = form["details"];
-            
+
             LoginDto logindto = JsonConvert.DeserializeObject<LoginDto>(data);
             if (form.Files.Count == 0 && logindto.Username == "" && logindto.password == "")
             {
@@ -129,31 +111,41 @@ namespace API.Controllers
             {
 
                 IFormFile file = form.Files[0];
-
-
                 _apiservices.wavfileCreate(file);
                 string voiceprint_login = await _apiservices.Get_voice_template(file);
                 string idenficationList = _apiservices.Get_identification_list();
-
                 iden_voice_temp scoreArr = new iden_voice_temp();
                 scoreArr.identification_list = idenficationList;
                 scoreArr.voice_template = voiceprint_login;
                 scores_thres_arr resultArr = _apiservices.Get_identification_result_array(scoreArr);
-                int[] indxs = _apiservices.Get_indexes_of_matched_result(resultArr);
-                var user1 = await _userManager.Users
-                .Include(p => p.Photos)
-                .SingleOrDefaultAsync(x => x.Id == indxs[0] + 1);
-
-
-
-                return new UserDto
+                float maxValue = resultArr.scores.Max();
+                int maxIndex = resultArr.scores.ToList().IndexOf(maxValue);
+                int[] indxs = await _apiservices.Get_indexes_of_matched_result(resultArr);
+                int finalIndx = 0;
+                foreach (int i in indxs)
                 {
-                    Username = user1.UserName,
-                    Token = await _tokenService.CreateTokenAsync(user1),
-                    PhotoUrl = user1.Photos.FirstOrDefault(x => x.IsMain)?.Url,
-                    KnownAs = user1.KnownAs,
-                    Gender = user1.Gender
-                };
+                    if (i == maxIndex)
+                    {
+                        finalIndx=i;
+                        var user1 = await _userManager.Users
+                        .Include(p => p.Photos)
+                        .SingleOrDefaultAsync(x => x.Id == maxIndex + 13);
+                        return new UserDto
+                        {
+                            Username = user1.UserName,
+                            Token = await _tokenService.CreateTokenAsync(user1),
+                            PhotoUrl = user1.Photos.FirstOrDefault(x => x.IsMain)?.Url,
+                            KnownAs = user1.KnownAs,
+                            Gender = user1.Gender
+                        };
+
+                    }
+                }
+
+                if (finalIndx == 0)
+                {
+                    return BadRequest("your voice couldnt match");
+                }
 
 
             }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using API.Data;
 using API.Entities;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using RestSharp;
@@ -40,6 +41,11 @@ namespace API.Services
 
     }
 
+    public class Indx
+    {
+        public List<int> MyArray { get; set; }
+    }
+
     public class enrichtemp
     {
         public string identification_list { get; set; }
@@ -64,8 +70,10 @@ namespace API.Services
     {
         public static float threshold;
         private readonly DataContext _context;
-        public apiservices(DataContext context)
+        private readonly UserManager<AppUser> _userManager;
+        public apiservices(UserManager<AppUser> userManager, DataContext context)
         {
+            _userManager = userManager;
             _context = context;
         }
 
@@ -75,7 +83,7 @@ namespace API.Services
             file.CopyTo(stream);
             byte[] arr = stream.ToArray();
             System.IO.File.WriteAllBytes(@"..\api\wavfile\register.wav", arr);
-            
+
 
         }
 
@@ -87,7 +95,7 @@ namespace API.Services
             var request = new RestRequest(Method.POST);
             request.AddHeader("x-api-key", "hkXVNav9gG67bETYEa3TS8imx12ljSYUqMEsWaEg");
             request.AddHeader("Content-Type", "multipart/form-data");
-            request.AddFile("wav_file",@"..\api\wavfile\register.wav");
+            request.AddFile("wav_file", @"..\api\wavfile\register.wav");
             IRestResponse response = client.Execute(request);
             return await Task.FromResult(response.Content.ToString());
         }
@@ -108,10 +116,10 @@ namespace API.Services
         }
 
 
-        public async void createIdentificationList()
+        public async Task<string> createIdentificationList()
         {
             List<string> voicetempArr = new List<string>();
-            foreach (AppUser item in await _context.Users.ToListAsync())
+            foreach (AppUser item in await _userManager.Users.ToListAsync())
             {
                 if (item.Voiceprint != null && item.Voiceprint != "")
                 {
@@ -138,16 +146,17 @@ namespace API.Services
                 string res = await Task.FromResult(response.Content.ToString());
                 System.IO.File.WriteAllText(@"..\API\wavfile\identificationList.txt", res);
             }
+            return Get_identification_list();
 
 
         }
 
-        public async void enrichIdentificationList(string[] voicetemplatelist)
+        public async Task enrichIdentificationList(string[] voicetemplatelist)
         {
             var idenlist = Get_identification_list();
             if (idenlist == "")
             {
-                createIdentificationList();
+                idenlist = await createIdentificationList();
             }
 
             enrichtemp temp = new enrichtemp();
@@ -169,12 +178,13 @@ namespace API.Services
                 string res = await Task.FromResult(response.Content.ToString());
                 System.IO.File.WriteAllText(@"..\API\wavfile\identificationList.txt", res);
             }
+            return;
 
         }
 
         public string Get_identification_list()
         {
-            return System.IO.File.ReadAllText(@"E:\voice sample collection\identificationList.txt");
+            return System.IO.File.ReadAllText(@"..\API\wavfile\identificationList.txt");
         }
 
         public scores_thres_arr Get_identification_result_array(iden_voice_temp socreArr)
@@ -209,7 +219,7 @@ namespace API.Services
             return myDeserializedClass;
         }
 
-        public int[] Get_indexes_of_matched_result(scores_thres_arr x)
+        public async Task<int[]> Get_indexes_of_matched_result(scores_thres_arr x)
         {
             string jsonString = JsonConvert.SerializeObject(x);
             var client = new RestClient("https://voice-rest-api.idrnd.net/identification_result/get_indexes_of_matched_templates");
@@ -217,11 +227,17 @@ namespace API.Services
             var request = new RestRequest(Method.POST);
             request.AddHeader("x-api-key", "hkXVNav9gG67bETYEa3TS8imx12ljSYUqMEsWaEg");
             request.AddHeader("Content-Type", "application/json");
-            request.AddParameter("application/json", x, ParameterType.RequestBody);
+            request.AddParameter("application/json", jsonString, ParameterType.RequestBody);
             IRestResponse response = client.Execute(request);
-
-            int[] Aint = Array.ConvertAll(response.Content.ToCharArray(), c => (int)Char.GetNumericValue(c));
-            return Aint;
+            string sc = await Task.FromResult(response.Content);
+            sc = sc.Substring(1, sc.Length - 2);
+            string[] splitted = sc.Split(',').ToArray();
+            int[] nums = new int[splitted.Length];
+            for (int i = 0; i < splitted.Length; i++)
+            {
+                nums[i] = int.Parse(splitted[i]);
+            }
+            return nums;
 
         }
         public async Task<string> GetSnr(string filepath)
